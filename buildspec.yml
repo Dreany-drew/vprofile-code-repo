@@ -1,0 +1,56 @@
+version: 0.2
+ 
+env:
+  parameter-store:
+    SONAR_TOKEN: "SONARTOKEN" # The SSM parameter name is SONARTOKEN
+    CODEARTIFACT_TOKEN: "CODEARTIFACT_TOKEN" # The SSM parameter name is CODEARTIFACT_TOKEN
+    HOST: "HOST" # The SSM parameter name is HOST
+    ORGANIZATION: "ORGANIZATION" # The SSM parameter name is ORGANIZATION
+    PROJECT: "PROJECT" # The SSM parameter name is PROJECT
+    CODEARTIFACT_DOMAIN: "codeartifact-domain" # The SSM parameter name for CodeArtifact domain
+    CODEARTIFACT_OWNER: "codeartifact-owner" # The SSM parameter name for CodeArtifact owner
+ 
+phases:
+  install:
+    runtime-versions:
+      java: corretto11
+    commands:
+      - echo "Installing Maven and setting up CodeArtifact..."
+      - export CODEARTIFACT_AUTH_TOKEN=$(aws codeartifact get-authorization-token --domain "$CODEARTIFACT_DOMAIN" --domain-owner "$CODEARTIFACT_OWNER" --query authorizationToken --output text)
+      - |
+        echo "<settings>
+              <servers>
+                <server>
+                  <id>codeartifact</id>
+                  <username>aws</username>
+                  <password>${CODEARTIFACT_AUTH_TOKEN}</password>
+                </server>
+              </servers>
+              </settings>" > /root/.m2/settings.xml
+      - mvn --version
+ 
+  pre_build:
+    commands:
+      - echo "Preparing environment..."
+      # The parameters will automatically be pulled from the SSM Parameter Store into environment variables
+      - echo "Environment setup completed."
+ 
+  build:
+    commands:
+      - echo "Running SonarQube Code Analysis..."
+      - mvn sonar:sonar \
+        -Dsonar.host.url=$HOST \
+        -Dsonar.organization="$ORGANIZATION" \
+        -Dsonar.projectKey=$PROJECT \
+        -Dsonar.login=$SONAR_TOKEN
+ 
+artifacts:
+  files:
+    - "**/*"
+  discard-paths: yes
+ 
+cache:
+  paths:
+    - "/root/.m2/**/*"
+ 
+ 
