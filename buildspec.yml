@@ -42,7 +42,7 @@ phases:
         -Dsonar.host.url=$HOST \
         -Dsonar.organization="$ORGANIZATION" \
         -Dsonar.projectKey=$PROJECT \
-        -Dsonar.login=$SONAR_TOKEN
+        -Dsonar.login=$SONAR_TOKEN -X
  
 artifacts:
   files:
